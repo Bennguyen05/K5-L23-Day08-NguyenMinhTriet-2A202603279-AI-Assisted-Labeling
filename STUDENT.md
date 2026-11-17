@@ -5,7 +5,7 @@
 - Lớp (L2 / L3 / khác): L2
 - Tài khoản GitHub: Bennguyen05
 - Repo bài nộp (URL): https://github.com/Bennguyen05/K5-L23-Day08-NguyenMinhTriet-2A202603279-AI-Assisted-Labeling>>
-- Commit chốt bài (hash): 
+- Commit chốt bài (hash): d48dfdaf922ec4fe945069fefac85a63638a4717
 - Máy: Windows, 16 GB RAM, không GPU (CPU, PyTorch 2.15 +cpu)
 - CVAT (Docker): v2.81.0
 
