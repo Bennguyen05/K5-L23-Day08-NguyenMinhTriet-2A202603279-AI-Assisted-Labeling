@@ -1,20 +1,22 @@
-# Báo cáo Day 08 — <<MSHV - Họ và tên>>
+# Báo cáo Day 08 — 2A202603279 - Nguyễn Minh Triết
 
-> Một file duy nhất cho cả bài (đã gộp recipe, QC và ghi chú cá nhân). Mọi con số kèm **mẫu số** và nguồn (file nào). Viết bằng lời của bạn.
 
 ## 1. Model và recipe (Part 2–3)
 
 | Lớp | Model + cỡ | Ngưỡng | Vì sao (dẫn `run_id` trong `model_log.csv`) |
 |---|---|---|---|
-| person / bicycle / motorbike / car / bus / truck | <<YOLO26m>> | <<theo lớp, từ threshold_sweep>> | <<>> |
-| three_wheeler | <<YOLOE-26s, prompt: ...>> | <<>> | <<>> |
+|| person | YOLO26m | 0.15 | recall 93% (13/14 gold), precision 39%; ngưỡng chung 0.5 làm mất 35% box (r01 → r02) |
+| motorbike | YOLO26m | 0.1 | recall 91% (10/11 gold), precision 43%; xe máy nhỏ / ở xa có conf thấp (r02) |
+| bicycle | YOLO26m | 0.2 | recall 100% (5/5 gold), precision 83% |
+| car | YOLO26m | 0.3 (mặc định) | không ngưỡng nào ≤ 0.5 đạt recall 90% (tối đa 88% = 7/8): 1 xe máy không bắt ở mọi ngưỡng |
+| bus / truck | YOLO26m | 0.3 (mặc định) | gold chỉ có 1 bus, 0 truck (< 5 vật): không đủ để chọn ngưỡng riêng |
+| three_wheeler | YOLOE-26s, prompt từ `taxonomy.json` (tuk-tuk, xích lô, ba gác) | 0.15 | recall 100% (7/7 gold), precision 78%; YOLO26 gọi tuk-tuk là truck/car (r01, r03) |
 
-- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): <<>>
-- **Phiên bản SAM bạn chọn** (SAM 1 / 2.1 / 3) và lý do: <<chất lượng mask, tốc độ, RAM, quyền truy cập>>
-- Lỗi nào **không sửa được bằng đổi ngưỡng** (ví dụ tuk-tuk bị gọi `car`)? Sửa thế nào? <<>>
+- Lệnh `merge_prelabels.py` đã dùng (dán nguyên): python scripts/merge_prelabels.py work/prelabel/yoloe_all/pre.coco.json work/prelabel/y26_all/pre.coco.json --thr "person=0.15,bicycle=0.2,motorbike=0.1,three_wheeler=0.15" --conf 0.3 --iou 0.6 --split "batch,gold" --out work/prelabel/merged_review/pre.coco.json
+- **Phiên bản SAM bạn chọn** SAM 2.1 base và lý do: Mask bao trọn người và xe khi box đúng (img_004); 10.5 giây/ảnh trên CPU (r04) chấp nhận được vì Part 5 chỉ cần 3 vật; không cần quyền truy cập như SAM 3; máy không có GPU.
+- Lỗi nào **không sửa được bằng đổi ngưỡng** (ví dụ tuk-tuk bị gọi `car`)? Sửa thế nào? YOLO26 không có lớp three_wheeler (COCO không có) nên gọi tuk-tuk là truck / car ở mọi ngưỡng (r01, r02, r04). Sửa bằng YOLOE gõ chữ cho riêng lớp three_wheeler, rồi gộp hai model bằng `merge_prelabels.py` (loại box trùng IoU 0.6).
 - Box **điểm cao mà sai** hoặc **điểm thấp mà đúng** (ảnh nào): <<>>
-- Giới hạn: chọn ngưỡng trên chính gold (4 ảnh) nên số đo máy trên gold là lạc quan: <<>>
-
+- Giới hạn: chọn ngưỡng trên chính gold (4 ảnh) nên số đo máy trên gold là lạc quan: lớp ít vật (bus 1, truck 0, bicycle 5) thì ngưỡng chỉ là ước lượng thô. Ngưỡng thấp (0.1–0.15) cho person / motorbike đổi recall lấy precision < 45%: người duyệt phải xoá nhiều box thừa.
 ## 2. AI error profile (từ `qc/review_stats.md`)
 
 | Trạng thái | Số | Tỉ lệ | Mẫu số |
