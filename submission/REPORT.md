@@ -21,28 +21,27 @@
 
 | Trạng thái | Số | Tỉ lệ | Mẫu số |
 |---|---|---|---|
-| accepted | <<>> | <<>> | <<box máy>> |
-| edited | <<>> | <<>> | <<>> |
-| deleted | <<>> | <<>> | <<>> |
-| added | <<>> | <<>> | <<đối tượng sau duyệt>> |
+| accepted | 451 | 61.7% | 731 box máy |
+| edited | 77 | 10.5% | 731 box máy |
+| deleted | 203 | 27.8% | 731 box máy |
+| added | 56 | 9.6% | 584 đối tượng sau duyệt |
 
-- Lớp nào máy tệ nhất? Vì sao (dẫn ảnh)? <<>>
-- So với gold: precision / recall của **máy** <<>> (mẫu số: <<đối tượng gold>>)
+- Lớp nào máy tệ nhất? Vì sao (dẫn ảnh)? **three_wheeler**: chỉ accepted 5/40 box máy (12.5%), deleted 26/40 (65%), edited 9. YOLOE bắt nhầm xe đẩy / xe chở hàng không động cơ (giống img_002 ở Part 2) và box lỏng; ngưỡng 0.15 chọn trên gold (7 vật) cho recall cao nhưng thừa nhiều trên batch. Tiếp theo là **motorbike**: accepted 118/240 (49%), deleted 83/240 (35%) do ngưỡng 0.1 và cụm xe máy nhỏ ở xa (img_018: 8 box < 20 px phải gộp thành ignore_region). **car** accepted cao (42/52 = 81%) nhưng máy sót 18 xe (added), thường là xe bị người / xe khác che.
+- So với gold: precision / recall của **máy** 53.1% (KTC 95%: 42–64%) / 93.5% (KTC 95%: 82–98%); TP 43, FP 38, FN 3 (mẫu số: 46 đối tượng gold, 4 ảnh). Lạc quan vì ngưỡng chọn trên chính 4 ảnh này.
 
 ## 3. Thiên kiến tự động hóa và ảnh bẫy
 
-- Bắt bẫy: <<.../12>>; loại nào lọt: <<>>; vì sao (bạn đã bỏ bước nào của checklist)? <<>>
-- Accepted cao mà bắt bẫy thấp (hoặc ngược lại) nói gì về cách bạn duyệt? <<>>
+- Bắt bẫy: 11/12 = 91.7% (KTC 95%: 65–99%); loose 3/3, wrong_class 3/3, extra 3/3, missing 2/3. Lọt: 1 bẫy `missing` ở img_035 (motorbike). Vì sao: bẫy missing là vật **không có box** nên không có gì kéo mắt tới; ở img_035 tôi đã quét nhanh và có nhiều motorbike nên bỏ sót góc. Đây đúng là lỗi khó thấy nhất.
+- Accepted 61.7% (không quá cao) cùng bắt bẫy 91.7% cho thấy tôi có sửa và xoá thật chứ không bấm Accept hàng loạt. Nhưng vẫn có dấu hiệu thiên kiến tự động hóa: lần export đầu còn 19 box < 20 px (8 cái ở img_018) mà tôi đã để nguyên vì box máy trông hợp lý; chỉ phát hiện nhờ cảnh báo của `validate_labels.py`, sau đó mới sửa.
 
 ## 4. Máy có đáng dùng không?
 
-- Thời gian (từ `time_log.csv`): gán tay <<... phút/ảnh>> vs duyệt <<... phút/ảnh>>. Thiên lệch (bạn gán gold trước nên đã quen cảnh): <<>>
-- Kết luận: <<có / không / chỉ cho lớp nào>>, dựa trên <<số liệu>>
-- **Ba quy tắc giảm thiên kiến của bạn** (mỗi quy tắc kiểm tra được bằng số hoặc việc làm):
-  1. <<>>
-  2. <<>>
-  3. <<>>
-
+- Thời gian (từ `time_log.csv`): gán tay 22 phút / 4 ảnh = 5.5 phút/ảnh (46 vật → 0.48 phút/vật) vs duyệt 180 phút / 24 ảnh = 7.5 phút/ảnh (584 vật → 0.21 phút/vật). Ảnh batch đông gấp đôi gold (24.3 vs 11.5 vật/ảnh) nên so theo **phút/vật** công bằng hơn. Thiên lệch: tôi gán gold trước nên đã quen kiểu cảnh và guideline khi duyệt batch → thời gian duyệt có lợi thế; ngược lại thời gian duyệt gồm cả sửa 19 box nhỏ sau khi validate.
+- Kết luận: **có, nhưng chỉ cho một số lớp**. Đáng dùng cho person (accepted 278/380 = 73%) và car (81%, nhưng phải quét kỹ vật bị che). Motorbike dùng được nếu gộp cụm xa thành ignore_region trước. **Không đáng** cho three_wheeler (accepted 12.5%): sửa / xoá tốn hơn vẽ tay; cần prompt YOLOE tốt hơn hoặc ngưỡng cao hơn. Precision chung 53% nghĩa là gần nửa box máy phải xoá.
+- **Ba quy tắc giảm thiên kiến của bạn**:
+  1. **Ẩn nhãn máy và quét 15 giây trên mọi ảnh**, đếm nhẩm theo lớp trước khi hiện nhãn; ảnh > 30 vật thì quét theo 4 góc. Kiểm tra: bẫy `missing` phải bắt 3/3 (lần này 2/3).
+  2. **Mọi box máy lớp three_wheeler / truck / car phải đếm số bánh trước khi giữ**, không dựa vào `conf`. Kiểm tra: bẫy `wrong_class` 3/3 và tỉ lệ edited/deleted của three_wheeler được ghi lại.
+  3. **Chạy `validate_labels.py` sau mỗi ~10 ảnh** (export tạm), sửa hết box < 20 px trước khi tiếp tục. Kiểm tra: 0 cảnh báo khi export cuối.
 ## 5. Mask SAM cho 3 vật (Part 5)
 
 | Ảnh | SAM (phiên bản) | Số click | Mask gồm người lái / hàng hoá? | Lỗi quan sát | File trong `masks/` |
